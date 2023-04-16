@@ -1,0 +1,87 @@
+---
+name: Build-Promote-GitOps
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'README.md'
+      - '.github/linters/**'
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+      - '.github/linters/**'
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+
+#### PULL REQUEST ####
+  docker-build-pr:
+    name: Call Build on PR
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+    uses: mostlydevops/actions/.github/workflows/reusable-docker-build.yaml@main
+    with:
+      # DON'T login to or push to Docker Hub
+      dockerhub-enable: false
+      ghcr-enable: true
+      push: true
+      image-names: |
+        ghcr.io/${{ github.repository }}
+
+  scan-pr:
+    name: CVE Scan
+    if: github.event_name == 'pull_request'
+    needs: docker-build-pr
+    permissions: 
+      packages: read
+    uses: mostlydevops/actions/.github/workflows/reusable-trivy-scan-image.yaml@main
+    secrets:
+      registry-username: ${{ github.actor }}
+      registry-password: ${{ secrets.GITHUB_TOKEN }}
+    with:
+      image: 'ghcr.io/mostlydevops/wordsmith-api:${{ needs.docker-build-pr.outputs.image-tag }}'
+      exit-code: 1
+      severity: HIGH,CRITICAL
+      ignore-unfixed: true
+
+#### MERGE TO MAIN ####
+  docker-build-merge:
+    name: Call Build on Push
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: write
+    uses: mostlydevops/actions/.github/workflows/reusable-docker-build.yaml@main
+    with:  
+      dockerhub-enable: false
+      ghcr-enable: true
+      push: true
+      image-names: |
+        ghcr.io/${{ github.repository }}
+        ghcr.io/${{ github.repository }}-stable
+      tag-rules: |
+        type=raw,value={{date 'YYYYMMDD'}}-{{sha}},enable={{is_default_branch}},priority=300
+        type=ref,event=tag,priority=200
+        type=raw,value=latest,enable={{is_default_branch}},priority=100
+
+  gitops-pr:
+    name: Call GitOps PR
+    if: github.event_name == 'push'
+    needs: docker-build-merge
+    uses: mostlydevops/actions/.github/workflows/reusable-gitops-pr.yaml@main
+    secrets:
+      github-token: ${{ secrets.GITOPS_WORDSMITH_K8S }}
+    with:
+      repo: mostlydevops/wordsmith-k8s
+      environment-dir: production
+      image: ghcr.io/${{ github.repository }}-stable
+      tag: ${{ needs.docker-build-merge.outputs.image-tag }}
