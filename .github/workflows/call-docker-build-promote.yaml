@@ -62,7 +62,7 @@ jobs:
     secrets:
       github-token: ${{ secrets.GITOPS_WORDSMITH_K8S }}
     with:
-      repo: UffizziCloud/MostlyDevOps-k8s
+      repo: UffizziCloud/MostlyDevOps-wordsmith-k8s
       environment-dir: uffizzi
       image: ghcr.io/${{ github.repository }}
       tag: ${{ needs.docker-build-pr.outputs.image-tag }}
