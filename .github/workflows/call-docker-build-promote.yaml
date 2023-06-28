@@ -67,6 +67,7 @@ jobs:
       image: ghcr.io/${{ github.repository }}
       tag: ${{ needs.docker-build-pr.outputs.image-tag }}
       pr-number: ${{ github.event.number }}
+      uffizzi-password: ${{ secrets.UFFIZZI_PASSWORD }}
 
 #### MERGE TO MAIN ####
   docker-build-merge:
