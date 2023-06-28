@@ -61,13 +61,13 @@ jobs:
     uses: UffizziCloud/MostlyDevOps-actions/.github/workflows/reusable-uffizzi.yaml@main
     secrets:
       github-token: ${{ secrets.GITOPS_WORDSMITH_K8S }}
+      uffizzi-password: ${{ secrets.UFFIZZI_PASSWORD }}
     with:
       repo: UffizziCloud/MostlyDevOps-wordsmith-k8s
       environment-dir: uffizzi
       image: ghcr.io/${{ github.repository }}
       tag: ${{ needs.docker-build-pr.outputs.image-tag }}
       pr-number: ${{ github.event.number }}
-      uffizzi-password: ${{ secrets.UFFIZZI_PASSWORD }}
 
 #### MERGE TO MAIN ####
   docker-build-merge:
