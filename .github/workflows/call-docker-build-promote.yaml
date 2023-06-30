@@ -27,7 +27,7 @@ jobs:
       contents: read
       packages: write
       pull-requests: write
-    uses: mostlydevops/actions/.github/workflows/reusable-docker-build.yaml@main
+    uses: zipofar/MostlyDevOps-actions/.github/workflows/reusable-docker-build.yaml@main
     with:
       # DON'T login to or push to Docker Hub
       dockerhub-enable: false
@@ -43,15 +43,31 @@ jobs:
     needs: docker-build-pr
     permissions: 
       packages: read
-    uses: mostlydevops/actions/.github/workflows/reusable-trivy-scan-image.yaml@main
+    uses: zipofar/MostlyDevOps-actions/.github/workflows/reusable-trivy-scan-image.yaml@main
     secrets:
       registry-username: ${{ github.actor }}
       registry-password: ${{ secrets.GITHUB_TOKEN }}
     with:
-      image: 'ghcr.io/mostlydevops/wordsmith-api:${{ needs.docker-build-pr.outputs.image-tag }}'
+      image: 'ghcr.io/${{ github.repository }}:${{ needs.docker-build-pr.outputs.image-tag }}'
       exit-code: 1
       severity: HIGH,CRITICAL
       ignore-unfixed: true
+
+  deploy-uffizzi:
+    name: Deploy to Uffizzi
+    if: github.event_name == 'pull_request'
+    needs: docker-build-pr
+    #uses: zipofar/MostlyDevOps-actions/.github/workflows/reusable-uffizzi.yaml@uffizzi
+    uses: zipofar/MostlyDevOps-actions/.github/workflows/reusable-uffizzi.yaml@main
+    secrets:
+      github-token: ${{ secrets.GITOPS_WORDSMITH_K8S }}
+      uffizzi-password: ${{ secrets.UFFIZZI_PASSWORD }}
+    with:
+      repo: UffizziCloud/MostlyDevOps-wordsmith-k8s
+      environment-dir: uffizzi
+      image: ghcr.io/${{ github.repository }}
+      tag: ${{ needs.docker-build-pr.outputs.image-tag }}
+      pr-number: ${{ github.event.number }}
 
 #### MERGE TO MAIN ####
   docker-build-merge:
@@ -61,7 +77,7 @@ jobs:
       contents: read
       packages: write
       pull-requests: write
-    uses: mostlydevops/actions/.github/workflows/reusable-docker-build.yaml@main
+    uses: zipofar/MostlyDevOps-actions/.github/workflows/reusable-docker-build.yaml@main
     with:  
       dockerhub-enable: false
       ghcr-enable: true
@@ -79,11 +95,11 @@ jobs:
     name: Call GitOps PR
     if: github.event_name == 'push'
     needs: docker-build-merge
-    uses: mostlydevops/actions/.github/workflows/reusable-gitops-pr.yaml@main
+    uses: zipofar/MostlyDevOps-actions/.github/workflows/reusable-gitops-pr.yaml@main
     secrets:
       github-token: ${{ secrets.GITOPS_WORDSMITH_K8S }}
     with:
-      repo: mostlydevops/wordsmith-k8s
+      repo: UffizziCloud/MostlyDevOps-k8s
       environment-dir: production
       image: ghcr.io/${{ github.repository }}-stable
       tag: ${{ needs.docker-build-merge.outputs.image-tag }}
