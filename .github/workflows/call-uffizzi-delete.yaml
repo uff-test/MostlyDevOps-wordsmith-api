@@ -12,7 +12,7 @@ concurrency:
 jobs:
   delete-uffizzi:
     name: Delete Uffizzi virtual cluster
-    uses: UffizziCloud/MostlyDevOps-actions/.github/workflows/reusable-uffizzi-delete.yaml@main
+    uses: zipofar/MostlyDevOps-actions/.github/workflows/reusable-uffizzi-delete.yaml@main
     secrets:
       github-token: ${{ secrets.GITOPS_WORDSMITH_K8S }}
       uffizzi-password: ${{ secrets.UFFIZZI_PASSWORD }}
